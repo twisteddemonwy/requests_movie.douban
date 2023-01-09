@@ -4,9 +4,19 @@ import requests
 
 from time import sleep
 
+
 base_url = "https://movie.douban.com/top250"
 user_agent = {"user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}
+# proxies = {"http": "127.0.0.1:1080", "https": "127.0.0.1:1080"}
+fieldnames = ['title', 'score', 'num_of_people', 'playback_addresses']
 
+
+def open_url(url):
+    # r = requests.get(url, headers=headers, proxies=proxies)
+    r = requests.get(url, headers=user_agent)
+    soup = bs4.BeautifulSoup(r.text, "html.parser")
+
+    return soup
 
 def get_all_pages(soup):
     url_list = [""]
@@ -46,10 +56,8 @@ def get_movie_score(movie):
 
 
 def main():
-    r = requests.get(base_url, headers=user_agent)
-    soup = bs4.BeautifulSoup(r.text, "html.parser")
+    soup = open_url(base_url)
     all_pages = get_all_pages(soup)
-    fieldnames = ['title', 'score', 'num_of_people', 'playback_addresses']
 
     with open('movie.csv', 'a') as f:
         csvw = csv.DictWriter(f, fieldnames=fieldnames, lineterminator='\n')
@@ -57,8 +65,7 @@ def main():
 
         for page in all_pages:
             if page:
-                r = requests.get(page, headers=user_agent)
-                soup = bs4.BeautifulSoup(r.text, "html.parser")
+                soup = open_url(page)
             movies = soup.find_all("div", class_="info")
             for movie in movies:
                 movie_info = get_movie_score(movie)

@@ -12,14 +12,25 @@ user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36
 
 class locators:
     pages = "div.paginator>a.num"
-    movies = "div.item-root a"
+    movies = "div.item-root>a"
+    title = "h1>span:first-child"
+    director = "div#info>span:first-child a"
+    score = "div.ratings-on-weight span.rating_per"
+    number_of_evaluations = "div.rating_sum span"
 
 
 def configure_driver():
     options = webdriver.ChromeOptions()
+    # options.add_argument('--headless')
     options.add_argument(f'user-agent={user_agent}')
-    options.add_argument('--headless')
+    options.add_experimental_option('excludeSwitches', ['enable-automation'])
+    options.add_experimental_option('useAutomationExtension', False)
     driver = webdriver.Chrome(options=options)
+
+    with open('stealth.min.js') as f:
+        js = f.read()
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {"source": js})
+
     driver.implicitly_wait(10)
 
     return driver
@@ -31,7 +42,6 @@ def open_url():
 
     driver = configure_driver()
     driver.get(base_url.format(search_text))
-    time.sleep(5)
 
     return driver
 
@@ -76,19 +86,37 @@ def get_all_movies(driver, pages):
     return url_list
 
 
+# 获取当前电影的评分
+def get_score(movie_info):
+    print(movie_info.select(locators.title)[0].text)
+
+    score = []
+    items = movie_info.select(locators.score)
+    for i in items:
+        score.append(i.text.replace("%", ""))
+
+    return score
+
+
+
+
 def main():
+    no_score = []
+
     driver = open_url()
     pages = get_all_pages(driver)
     movies = get_all_movies(driver, pages)
     driver.quit()
-    print(movies)
 
+    for i in movies:
+        r = requests.get(i, headers={"user-agent": f"{user_agent}"})
+        soup = bs4.BeautifulSoup(r.text, "html.parser")
+        score = get_score(soup)
+        print(score)
 
-    # 进入电影详细信息页面
-    # 排除特殊情况的影片
-    # 获取电影名称，一到五星数据
-    # 计算电影类型
-    # 将数据存入csv文件
+    # 获得电影的评分
+    # 如果不存在评分 判断是否为未上映，做存储
+    # 如果存在评分，判断评级
 
 
 if __name__ == "__main__":

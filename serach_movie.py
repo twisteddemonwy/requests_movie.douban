@@ -7,9 +7,6 @@ from selenium.webdriver.common.by import By
 from urllib.parse import quote
 
 
-base_url = "https://search.douban.com/movie/subject_search?search_text={}&cat=1002"
-user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
-
 class locators:
     pages = "div.paginator>a.num"
     movies = "div.item-root>a"
@@ -19,9 +16,14 @@ class locators:
     number_of_evaluations = "div.rating_sum span"
 
 
+base_url = "https://search.douban.com/movie/subject_search?search_text={}&cat=1002"
+user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
+
+
 def configure_driver():
     options = webdriver.ChromeOptions()
-    # options.add_argument('--headless')
+    options.add_argument('--headless')
+    # options.add_argument(f"--proxy-server={random.choice(ip_list)}")
     options.add_argument(f'user-agent={user_agent}')
     options.add_experimental_option('excludeSwitches', ['enable-automation'])
     options.add_experimental_option('useAutomationExtension', False)
@@ -82,13 +84,14 @@ def get_all_movies(driver, pages):
         for page in pages:
             driver.get(page)
             url_list.extend(get_movie_url(driver))
+            time.sleep(10)
 
     return url_list
 
 
 # 获取当前电影的评分
 def get_score(movie_info):
-    print(movie_info.select(locators.title)[0].text)
+    print("## 当前影片: ", movie_info.select(locators.title)[0].text)
 
     score = []
     items = movie_info.select(locators.score)
@@ -98,23 +101,19 @@ def get_score(movie_info):
     return score
 
 
-
-
 def main():
-    no_score = []
-
     driver = open_url()
     pages = get_all_pages(driver)
     movies = get_all_movies(driver, pages)
     driver.quit()
 
-    for i in movies:
-        r = requests.get(i, headers={"user-agent": f"{user_agent}"})
+    for movie in movies:
+        r = requests.get(movie, headers={"user-agent": f"{user_agent}"})
         soup = bs4.BeautifulSoup(r.text, "html.parser")
         score = get_score(soup)
         print(score)
+        time.sleep(5)
 
-    # 获得电影的评分
     # 如果不存在评分 判断是否为未上映，做存储
     # 如果存在评分，判断评级
 

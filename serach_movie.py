@@ -1,10 +1,14 @@
+# TODO: 优化评级方式
+# TODO: 影片无导演时 list index out of range
+
 import bs4
 import requests
 import time
-
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from urllib.parse import quote
+
+from bot import Bot
 
 
 class locators:
@@ -13,6 +17,7 @@ class locators:
     title = "h1>span:first-child"
     director = "div#info>span:first-child a"
     score = "div.ratings-on-weight span.rating_per"
+    no_score = "div.rating_sum"
     number_of_evaluations = "div.rating_sum span"
 
 
@@ -57,7 +62,7 @@ def get_all_pages(driver):
     current_url = driver.current_url
     statr = 0
     url_list = []
-    for _ in range(pages-1):
+    for _ in range(pages - 1):
         statr += 15
         url_list.append(current_url + f"&start={statr}")
 
@@ -91,14 +96,41 @@ def get_all_movies(driver, pages):
 
 # 获取当前电影的评分
 def get_score(movie_info):
-    print("## 当前影片: ", movie_info.select(locators.title)[0].text)
-
     score = []
     items = movie_info.select(locators.score)
     for i in items:
-        score.append(i.text.replace("%", ""))
+        score.append(float(i.text.replace("%", "")))
 
     return score
+
+
+# 对没有评分的电影进行分类并保存
+def no_score(soup):
+    msg = soup.select(locators.no_score)[0].text.strip()
+    result = {"电影名": soup.select(locators.title)[0].text, "导演": soup.select(locators.director)[0].text, "评级": f"{msg}"}
+    Bot().save_data_to_csv(path='result/search_result.csv', data=result)
+
+
+# 对电影进行评级
+def rating(score):
+    if (score[2] + score[3] + score[4]) < 5:
+        msg = "F"
+        return msg
+    # if score[1] > score[0] and score[1] > score[2] and score[3] < 5 and score[4] < 5:
+    elif (score[3] + score[4]) < 10 and int(score[1] - score[0]) < 5 and int(score[2] - score[1]) < 5:
+        msg = "P"
+        return msg
+    elif score[0] < 10 and score[1] < 10:
+        msg = "b"
+        return msg
+    elif 70 < (score[0] + score[4]) < 80 and int(score[1] - score[4]) < 10:
+        msg = "C"
+        return msg
+    elif score[4] > 80:
+        msg = "L"
+        return msg
+    else:
+        return "评分太过集中，无法锁定类型！！"
 
 
 def main():
@@ -110,12 +142,20 @@ def main():
     for movie in movies:
         r = requests.get(movie, headers={"user-agent": f"{user_agent}"})
         soup = bs4.BeautifulSoup(r.text, "html.parser")
+        print("## 当前影片: ", soup.select(locators.title)[0].text)
         score = get_score(soup)
-        print(score)
-        time.sleep(5)
+        if not score:
+            no_score(soup)
+            continue
+        msg = rating(score)
+        result = {
+            "电影名": soup.select(locators.title)[0].text,
+            "导演": soup.select(locators.director)[0].text,
+            "评级": f"{msg}",
+        }
+        Bot().save_data_to_csv(path="result/search_result.csv", data=result)
 
-    # 如果不存在评分 判断是否为未上映，做存储
-    # 如果存在评分，判断评级
+        time.sleep(5)
 
 
 if __name__ == "__main__":

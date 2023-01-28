@@ -1,6 +1,4 @@
-# TODO: 继续重构 get_all_movies()
 # TODO: 优化评级方式
-# TODO: 影片无导演时 list index out of range
 
 import bs4
 import requests

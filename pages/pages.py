@@ -10,7 +10,9 @@ class Pages:
 
     # Get the total number of pages and the url of each page (do not include the first page)
     def get_all_pages(self, driver):
-        pages = int(self.bot.operational_elements(driver, locator=Locators.pages, index=(True, -1), attr=(False, "")).text)
+        pages = int(
+            self.bot.operational_elements(driver, locator=Locators.pages, index=(True, -1), attr=(False, "")).text
+        )
         if not pages:
             return None
 
@@ -82,14 +84,13 @@ class Pages:
 
     # Rate movies
     def rating(self, score):
-        if (score[2] + score[3] + score[4]) < 5:
+        if (score[2] + score[3] + score[4]) < 10:
             msg = "F"
             return msg
-        # if score[1] > score[0] and score[1] > score[2] and score[3] < 5 and score[4] < 5:
-        elif (score[3] + score[4]) < 10 and int(score[1] - score[0]) < 5 and int(score[2] - score[1]) < 5:
+        elif (score[3] + score[4]) < 10 and score[1] > score[2] and score[0] > score[2]:
             msg = "P"
             return msg
-        elif score[0] < 10 and score[1] < 10:
+        elif score[0] < 10 and score[1] < 10 and int(score[2] + score[3]) > 20:
             msg = "b"
             return msg
         elif 70 < (score[0] + score[4]) < 80 and int(score[1] - score[4]) < 10:
